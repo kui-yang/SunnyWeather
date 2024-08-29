@@ -1,10 +1,13 @@
 package com.sunnyweather.android.ui.weather
 
+import android.content.Context
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.inputmethod.InputMethodManager
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
@@ -12,9 +15,13 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.GravityCompat
 import androidx.core.view.get
 import androidx.databinding.DataBindingUtil
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.drawerlayout.widget.DrawerLayout.DrawerListener
 import androidx.lifecycle.ViewModelProvider
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.sunnyweather.android.R
 import com.sunnyweather.android.databinding.ActivityWeatherBinding
 import com.sunnyweather.android.databinding.ForecastBinding
@@ -26,7 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 class WeatherActivity : AppCompatActivity() {
-    private val viewModel by lazy {
+     val viewModel by lazy {
         ViewModelProvider(this)[WeatherViewModel::class.java]
     }
     private lateinit var weatherBinding: ActivityWeatherBinding
@@ -43,13 +50,16 @@ class WeatherActivity : AppCompatActivity() {
     private lateinit var dressingText: TextView
     private lateinit var ultravioletText: TextView
     private lateinit var carWashingText: TextView
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+    private lateinit var navBtn: Button
+    public lateinit var drawerLayout: DrawerLayout
+
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val decorView = window.decorView
-        val controller = decorView.windowInsetsController
-//        controller?.hide(WindowInsets.Type.statusBars())
-        decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         window.statusBarColor = Color.TRANSPARENT
         weatherBinding = DataBindingUtil.setContentView(this, R.layout.activity_weather)
         initView()
@@ -74,8 +84,39 @@ class WeatherActivity : AppCompatActivity() {
                 Toast.makeText(this, "无法成功获取天气信息", Toast.LENGTH_SHORT).show()
                 result.exceptionOrNull()?.printStackTrace()
             }
+            swipeRefreshLayout.isRefreshing = false
         }
+        swipeRefreshLayout.setColorSchemeResources(R.color.purple_700)
+        refreshWeather()
         viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        swipeRefreshLayout.setOnRefreshListener {
+            refreshWeather()
+        }
+        navBtn.setOnClickListener {
+            drawerLayout.openDrawer(GravityCompat.START)
+        }
+        drawerLayout.addDrawerListener(object :DrawerListener {
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {
+
+            }
+
+            override fun onDrawerOpened(drawerView: View) {
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                val manager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                manager.hideSoftInputFromWindow(drawerView.windowToken,InputMethodManager.HIDE_NOT_ALWAYS)
+            }
+
+            override fun onDrawerStateChanged(newState: Int) {
+            }
+
+        })
+    }
+
+    fun refreshWeather() {
+        viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        swipeRefreshLayout.isRefreshing = true
     }
 
     private fun showWeatherInfo(weather: Weather) {
@@ -135,5 +176,8 @@ class WeatherActivity : AppCompatActivity() {
         dressingText = lifeIndexBinding.dressingText
         ultravioletText = lifeIndexBinding.ultravioletText
         carWashingText = lifeIndexBinding.carWashingText
+        swipeRefreshLayout = weatherBinding.swipeRefresh
+        navBtn = nowBinding.navBtn
+        drawerLayout = weatherBinding.drawerLayout
     }
 }
